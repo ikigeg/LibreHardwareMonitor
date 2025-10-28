@@ -60,7 +60,7 @@ jobs:
         shell: pwsh
         run: |
           mkdir output
-          Copy-Item -Recurse "LibreHardwareMonitor\bin\Release\net472\*" output\
+          Copy-Item -Recurse "bin\Release\net472\*" output\
           Compress-Archive -Path output\* -DestinationPath LibreHardwareMonitor_build.zip
 
       - name: Upload artifact
