@@ -226,30 +226,44 @@ namespace Aga.Controls.Tree
 		}
 
 		public TreeNodeAdv PreviousNode
-		{
-			get
-			{
-				if (_parent != null)
-				{
-					int index = Index;
-					if (index > 0)
-						return _parent.Nodes[index - 1];
-				}
-				return null;
-			}
-		}
+        {
+            get
+            {
+                if (_parent != null)
+                {
+                    int index = Index;
+        
+                    // Defensive guard: parent/children can change between reads.
+                    // Index may be -1 if the node was removed.
+                    if (index <= 0)
+                        return null;
+        
+                    int count = _parent.Nodes.Count;
+                    if (index - 1 < 0 || index - 1 >= count)
+                        return null;
+        
+                    return _parent.Nodes[index - 1];
+                }
+                return null;
+            }
+        }
+
 
 		public TreeNodeAdv NextNode
 		{
 			get
 			{
 				if (_parent != null)
-				{
-					int index = Index;
-					if (index < _parent.Nodes.Count - 1)
-						return _parent.Nodes[index + 1];
-				}
-				return null;
+                {
+                    int index = Index;
+        
+                    // Defensive guard: list may have changed since Index was computed
+                    if (index < 0 || index >= _parent.Nodes.Count - 1)
+                        return null;
+        
+                    return _parent.Nodes[index + 1];
+                }
+                return null;
 			}
 		}
 
@@ -270,21 +284,36 @@ namespace Aga.Controls.Tree
 		}
 
 		internal TreeNodeAdv NextVisibleNode
-		{
-			get
-			{
-				if (IsExpanded && Nodes.Count > 0)
-					return Nodes[0];
-				else
-				{
-					TreeNodeAdv nn = NextNode;
-					if (nn != null)
-						return nn;
-					else
-						return BottomNode;
-				}
-			}
-		}
+        {
+            get
+            {
+                if (IsExpanded)
+                {
+                    int count = Nodes.Count;
+        
+                    // Snapshot count, then re-validate before indexing
+                    if (count > 0)
+                    {
+                        // In highly contended cases, Count could drop to 0 immediately after the check.
+                        // Guard again to avoid an out-of-range on Nodes[0].
+                        if (count >= 1)
+                            return Nodes[0];
+                    }
+                }
+                else
+                {
+                    TreeNodeAdv nn = NextNode;
+                    if (nn != null)
+                        return nn;
+                    else
+                        return BottomNode;
+                }
+        
+                // If we fell through due to a race, just continue the visible traversal
+                return NextNode ?? BottomNode;
+            }
+        }
+
 
 		public bool CanExpand
 		{
