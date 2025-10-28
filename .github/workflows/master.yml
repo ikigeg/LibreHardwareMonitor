@@ -45,6 +45,17 @@ jobs:
       - name: Build library (x64)
         run: msbuild LibreHardwareMonitorLib\LibreHardwareMonitorLib.csproj /p:Configuration=Release /p:Platform=x64 /m
 
+      - name: List build output folders
+        shell: pwsh
+        run: |
+          Write-Host "=== Directory tree for main project ==="
+          Get-ChildItem -Recurse -Directory -Depth 3 LibreHardwareMonitor | Select-Object FullName
+          Write-Host "`n=== Directory tree for library project ==="
+          Get-ChildItem -Recurse -Directory -Depth 3 LibreHardwareMonitorLib | Select-Object FullName
+      
+          Write-Host "`n=== Executables and DLLs found ==="
+          Get-ChildItem -Recurse -Include *.exe,*.dll | Select-Object FullName, Length | Sort-Object Length -Descending
+
       - name: Package build output
         shell: pwsh
         run: |
