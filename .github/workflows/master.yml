@@ -49,8 +49,8 @@ jobs:
         shell: pwsh
         run: |
           mkdir output
-          Copy-Item -Recurse "bin\x64\Release\*" output\
-          Copy-Item -Recurse "LibreHardwareMonitorLib\bin\x64\Release\*" output\
+          Copy-Item -Recurse "bin\Release\*" output\
+          Copy-Item -Recurse "LibreHardwareMonitorLib\bin\Release\*" output\
           Compress-Archive -Path output\* -DestinationPath LibreHardwareMonitor_build.zip
 
       - name: Upload artifact
