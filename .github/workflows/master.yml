@@ -13,41 +13,48 @@ jobs:
       - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Setup NuGet
-        uses: nuget/setup-nuget@v2
-
-      - name: Setup MSBuild
+      - name: Setup build tools
         uses: microsoft/setup-msbuild@v1.1
         with:
           msbuild-architecture: x64
 
-      - name: Increment version
-        run: |
-          (Get-Content Directory.Build.props) | % {
-            $m = [regex]::match($_, '<Version>(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)(?:-[^<]*)?</Version>');
-            if($m.Success) {
-              $new = "<Version>{0}.{1}.{2}-f1arcade.{3}</Version>" -f $m.Groups[1].Value,$m.Groups[2].Value,([int]$m.Groups[3].Value+1),$env:GITHUB_RUN_NUMBER;
-              $_ -replace $m.Value, $new
-            } else { $_ }
-          } | Set-Content Directory.Build.props
+      - name: Setup NuGet
+        uses: nuget/setup-nuget@v2
 
-      - name: Restore dependencies
+      # Optional: bump the patch version number automatically if not manually updated
+      - name: Increment version in Directory.Build.props
+        shell: pwsh
+        run: |
+          $file = "Directory.Build.props"
+          if (Test-Path $file) {
+            (Get-Content $file) | ForEach-Object {
+              $m = [regex]::match($_, '<Version>(\d+)\.(\d+)\.(\d+)</Version>')
+              if ($m.Success) {
+                $newPatch = [int]$m.Groups[3].Value + 1
+                $_ -replace $m.Value, "<Version>$($m.Groups[1]).$($m.Groups[2]).$newPatch</Version>"
+              } else { $_ }
+            } | Set-Content $file
+          }
+
+      - name: Restore solution packages
         run: nuget restore LibreHardwareMonitor.sln
 
       - name: Build application (x64)
-        run: msbuild LibreHardwareMonitor\LibreHardwareMonitor.csproj /p:Configuration=Release /p:Platform=x64
+        run: msbuild LibreHardwareMonitor\LibreHardwareMonitor.csproj /p:Configuration=Release /p:Platform=x64 /m
 
       - name: Build library (x64)
-        run: msbuild LibreHardwareMonitorLib\LibreHardwareMonitorLib.csproj /p:Configuration=Release /p:Platform=x64
+        run: msbuild LibreHardwareMonitorLib\LibreHardwareMonitorLib.csproj /p:Configuration=Release /p:Platform=x64 /m
 
       - name: Package build output
+        shell: pwsh
         run: |
           mkdir output
-          Copy-Item -Recurse LibreHardwareMonitor\bin\Release\net472\* output\
+          Copy-Item -Recurse "LibreHardwareMonitor\bin\x64\Release\*" output\
+          Copy-Item -Recurse "LibreHardwareMonitorLib\bin\x64\Release\*" output\
           Compress-Archive -Path output\* -DestinationPath LibreHardwareMonitor_build.zip
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: LibreHardwareMonitor-build
+          name: LibreHardwareMonitor-build-${{ github.run_number }}
           path: LibreHardwareMonitor_build.zip
